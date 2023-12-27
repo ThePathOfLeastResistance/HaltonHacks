@@ -1,18 +1,21 @@
-#basic functionality
+
 import cv2
 import time
+import sys
+import random
 
 handCascade = cv2.CascadeClassifier('/Users/nirekshetty/Downloads/cv2/hand.xml')
 palmCascade = cv2.CascadeClassifier('/Users/nirekshetty/Downloads/palm.xml')
 
 
 import pygame
+cap = cv2.VideoCapture(0)
+
 
 def handTrack(handCascade , LR=False ):
     start = time.time()
     WIDTH = 1080
     HEIGHT = 720
-    cap = cv2.VideoCapture(0)
     cap.set(3 ,WIDTH)
     cap.set(4 ,HEIGHT)
     hand_cascade = handCascade
@@ -30,16 +33,15 @@ def handTrack(handCascade , LR=False ):
         for (x, y, w, h) in hand:
             print( f"{x} , {y} , {h} ")
             center = [WIDTH/2 ,HEIGHT/2]
-            print(x - center[0] , y - center[1])
-            DX = x - center[0]
+            print("center" , x - center[0] , y - center[1])
+            
             DY = y - center[1]
-            #lowers sensitivity to LR bc the video stream is much longer horizontaly than vertically
             if time.time() - start >= 2:
                 return "Timed Out"
-            if DY > 10:
+            if DY > -90:
                 print("D")
                 return "D"
-            if DY < 10:
+            if DY < -90:
                 print("U")
                 return "U"
             
@@ -68,7 +70,7 @@ WINNING_SCORE = 10
 
 class Paddle:
     COLOR = WHITE
-    VEL = 30
+    VEL = 20
 
     def __init__(self, x, y, width, height):
         self.x = self.original_x = x
@@ -92,9 +94,14 @@ class Paddle:
         self.x = self.original_x
         self.y = self.original_y
 
+def rightPaddleAlgorithm(right_paddle , ball):
+        if ball.y > right_paddle.y + right_paddle.height/2:
+            right_paddle.move(up=False)
+        if ball.y < right_paddle.y + right_paddle.height/2:
+            right_paddle.move(up=True)
 
 class Ball:
-    MAX_VEL = 70
+    MAX_VEL = 20
     COLOR = WHITE
 
     def __init__(self, x, y, radius):
@@ -103,6 +110,8 @@ class Ball:
         self.radius = radius
         self.x_vel = self.MAX_VEL
         self.y_vel = 0
+        self.particles = []
+        self.size = 12
 
     def draw(self, win):
         pygame.draw.circle(win, self.COLOR, (self.x, self.y), self.radius)
@@ -116,6 +125,23 @@ class Ball:
         self.y = self.original_y
         self.y_vel = 0
         self.x_vel *= -1
+    def emit(self):
+        if self.particles:
+            self.delete_particles()
+            for particle in self.particles:
+                particle[0].x -= 1
+                pygame.draw.rect(WIN,particle[1],particle[0])
+
+
+    def add_particles(self,offset,color):
+        pos_x = self.x
+        pos_y = self.y
+        particle_rect = pygame.Rect(int(pos_x - self.size/2),int(pos_y - self.size/2),self.size,self.size)
+        self.particles.append((particle_rect,color))
+
+    def delete_particles(self):
+        particle_copy = [particle for particle in self.particles if particle[0].x > 0]
+        self.particles = particle_copy
 
 
 def draw(win, paddles, ball, left_score, right_score):
@@ -169,28 +195,26 @@ def handle_collision(ball, left_paddle, right_paddle):
                 ball.y_vel = -1 * y_vel
 
 
-def handle_paddle_movement(keys, left_paddle, right_paddle):
+def handle_paddle_movement(keys, left_paddle, right_paddle , ball):
     if handTrack(handCascade) == "U"and left_paddle.y - left_paddle.VEL >= 0:
         left_paddle.move(up=True)
     if handTrack(handCascade) == "D" and left_paddle.y + left_paddle.VEL + left_paddle.height <= HEIGHT:
         left_paddle.move(up=False)
     else:
-        left_paddle.move(N=True)        
-    if keys[pygame.K_UP] and right_paddle.y - right_paddle.VEL >= 0:
-        right_paddle.move(up=True)
-    elif keys[pygame.K_DOWN] and right_paddle.y + right_paddle.VEL + right_paddle.height <= HEIGHT:
-        right_paddle.move(up=False)
+        left_paddle.move(N=True)   
+    rightPaddleAlgorithm(right_paddle , ball)
+    
 
-
+pygame.display.flip()
 
 def main():
     run = True
     clock = pygame.time.Clock()
 
     left_paddle = Paddle(10, HEIGHT//2 - PADDLE_HEIGHT //
-                         2, PADDLE_WIDTH, PADDLE_HEIGHT)
+                         2 + 200, PADDLE_WIDTH, PADDLE_HEIGHT)
     right_paddle = Paddle(WIDTH - 10 - PADDLE_WIDTH, HEIGHT //
-                          2 - PADDLE_HEIGHT//2, PADDLE_WIDTH, PADDLE_HEIGHT)
+                          2 - PADDLE_HEIGHT//2 - 200, PADDLE_WIDTH, PADDLE_HEIGHT)
     ball = Ball(WIDTH // 2, HEIGHT // 2, BALL_RADIUS)
 
     left_score = 0
@@ -199,14 +223,22 @@ def main():
     while run:
         clock.tick(FPS)
         draw(WIN, [left_paddle, right_paddle], ball, left_score, right_score)
+        ball.add_particles(-30,pygame.Color("Red"))
+        ball.add_particles(-18,pygame.Color("Orange"))
+        ball.add_particles(-6,pygame.Color("Yellow"))
+        ball.add_particles(6,pygame.Color("Green"))
+        ball.add_particles(18,pygame.Color("Blue"))
+        ball.add_particles(30,pygame.Color("Purple"))
 
+        
+        ball.emit()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
                 break
 
         keys = pygame.key.get_pressed()
-        handle_paddle_movement(keys, left_paddle, right_paddle)
+        handle_paddle_movement(keys, left_paddle, right_paddle , ball)
 
         ball.move()
         handle_collision(ball, left_paddle, right_paddle)
