@@ -6,7 +6,7 @@ import random
 
 handCascade = cv2.CascadeClassifier('/Users/nirekshetty/Downloads/cv2/hand.xml')
 palmCascade = cv2.CascadeClassifier('/Users/nirekshetty/Downloads/palm.xml')
-
+smileCascade = cv2.CascadeClassifier('/Users/nirekshetty/Downloads/cv2/smile_cascade.xml')
 
 import pygame
 cap = cv2.VideoCapture(0)
@@ -14,7 +14,7 @@ cap = cv2.VideoCapture(0)
 
 def handTrack(handCascade , LR=False ):
     start = time.time()
-    WIDTH = 1080
+    WIDTH = 1080 
     HEIGHT = 720
     cap.set(3 ,WIDTH)
     cap.set(4 ,HEIGHT)
@@ -52,7 +52,7 @@ def handTrack(handCascade , LR=False ):
 pygame.init()
 
 
-WIDTH, HEIGHT = 700, 500
+WIDTH, HEIGHT = 700 , 500
 WIN = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Pong")
 
