@@ -1,5 +1,52 @@
 
+import cv2
+import time
+
+handCascade = cv2.CascadeClassifier('/Users/nirekshetty/Downloads/cv2/hand.xml')
+palmCascade = cv2.CascadeClassifier('/Users/nirekshetty/Downloads/palm.xml')
+
+
 import pygame
+
+def handTrack(handCascade , LR=False ):
+    start = time.time()
+    WIDTH = 1080
+    HEIGHT = 720
+    cap = cv2.VideoCapture(0)
+    cap.set(3 ,WIDTH)
+    cap.set(4 ,HEIGHT)
+    hand_cascade = handCascade
+
+
+    while True:
+        ret, frame = cap.read()
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        hand = hand_cascade.detectMultiScale(gray, 1.3, 5)
+        palm = palmCascade.detectMultiScale(gray, 1.3, 5)
+        if palm != (): 
+            print("Detected")
+            return "N"
+        
+        for (x, y, w, h) in hand:
+            print( f"{x} , {y} , {h} ")
+            center = [WIDTH/2 ,HEIGHT/2]
+            print(x - center[0] , y - center[1])
+            DX = x - center[0]
+            DY = y - center[1]
+            #lowers sensitivity to LR bc the video stream is much longer horizontaly than vertically
+            if time.time() - start >= 2:
+                return "Timed Out"
+            if DY > 10:
+                print("D")
+                return "D"
+            if DY < 10:
+                print("U")
+                return "U"
+            
+            else: 
+                return "N"
+               
+
 pygame.init()
 
 
@@ -7,7 +54,7 @@ WIDTH, HEIGHT = 700, 500
 WIN = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Pong")
 
-FPS = 60
+FPS = 30
 
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
@@ -21,7 +68,7 @@ WINNING_SCORE = 10
 
 class Paddle:
     COLOR = WHITE
-    VEL = 6
+    VEL = 30
 
     def __init__(self, x, y, width, height):
         self.x = self.original_x = x
@@ -33,8 +80,10 @@ class Paddle:
         pygame.draw.rect(
             win, self.COLOR, (self.x, self.y, self.width, self.height))
 
-    def move(self, up=True):
-        if up:
+    def move(self, up=True , N = False):
+        if N == True:
+            self.y = self.y
+        elif up:
             self.y -= self.VEL
         else:
             self.y += self.VEL
@@ -45,7 +94,7 @@ class Paddle:
 
 
 class Ball:
-    MAX_VEL = 5
+    MAX_VEL = 70
     COLOR = WHITE
 
     def __init__(self, x, y, radius):
@@ -76,7 +125,8 @@ def draw(win, paddles, ball, left_score, right_score):
     right_score_text = SCORE_FONT.render(f"{right_score}", 1, WHITE)
     win.blit(left_score_text, (WIDTH//4 - left_score_text.get_width()//2, 20))
     win.blit(right_score_text, (WIDTH * (3/4) -
-                                right_score_text.get_width()//2, 20))
+    right_score_text.get_width()//2, 20))
+    
 
     for paddle in paddles:
         paddle.draw(win)
@@ -120,15 +170,17 @@ def handle_collision(ball, left_paddle, right_paddle):
 
 
 def handle_paddle_movement(keys, left_paddle, right_paddle):
-    if keys[pygame.K_w] and left_paddle.y - left_paddle.VEL >= 0:
+    if handTrack(handCascade) == "U"and left_paddle.y - left_paddle.VEL >= 0:
         left_paddle.move(up=True)
-    if keys[pygame.K_s] and left_paddle.y + left_paddle.VEL + left_paddle.height <= HEIGHT:
+    if handTrack(handCascade) == "D" and left_paddle.y + left_paddle.VEL + left_paddle.height <= HEIGHT:
         left_paddle.move(up=False)
-
+    else:
+        left_paddle.move(N=True)        
     if keys[pygame.K_UP] and right_paddle.y - right_paddle.VEL >= 0:
         right_paddle.move(up=True)
-    if keys[pygame.K_DOWN] and right_paddle.y + right_paddle.VEL + right_paddle.height <= HEIGHT:
+    elif keys[pygame.K_DOWN] and right_paddle.y + right_paddle.VEL + right_paddle.height <= HEIGHT:
         right_paddle.move(up=False)
+
 
 
 def main():
